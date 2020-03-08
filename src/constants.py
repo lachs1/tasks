@@ -1,0 +1,2 @@
+TASK_BG_COLOR = "#bdc3c7"
+PLACEHOLDER_COLOR = "#7f8c8d"
