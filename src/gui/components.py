@@ -1,7 +1,7 @@
 import tkinter as tk
 
+from src.constants import MORE_IMAGE, PLACEHOLDER_COLOR, SORT_IMAGE, TASK_BG_COLOR
 from src.task import Task
-from src.constants import TASK_BG_COLOR, PLACEHOLDER_COLOR
 
 
 class TaskElement(tk.Frame):
@@ -33,7 +33,7 @@ class TaskElement(tk.Frame):
         check_button = tk.Checkbutton(
             master=self,
             variable=self._checkbox_variable,
-            text=self.task.props["text"],
+            text=self.task.text,
             bg=self["bg"],
         )
         check_button.grid(row=0, column=0)
@@ -115,7 +115,7 @@ class EntryElement(tk.Entry):
         text = self.get()
         if text:
             self._clean()
-            task = Task(props={"text": text, "due": 4})
+            task = Task(date="", text=text)
             self.master.add_task(task=task)
         else:
             print("empty")
@@ -144,3 +144,68 @@ class EntryElement(tk.Entry):
         """
         if not self.get():
             self._append_placeholder()
+
+
+class ButtonMapElement(tk.Frame):
+    def __init__(self, master):
+        """
+
+        :param master: Tk GUI Object
+        """
+        super().__init__(master=master)
+        self._initialize()
+
+    def _initialize(self) -> None:
+        """
+
+        :return: None
+        """
+
+        self.grid_columnconfigure(index=0, pad=5)
+        self.grid_columnconfigure(index=1, pad=5)
+
+        sort_image = tk.PhotoImage(file=SORT_IMAGE)
+        more_image = tk.PhotoImage(file=MORE_IMAGE)
+
+        sort_button = ImageButtonWithText(master=self, image=sort_image, text="Sort")
+        more_button = ImageButtonWithText(master=self, image=more_image, text="More")
+
+        sort_button.grid(row=0, column=0, padx=10)
+        more_button.grid(row=0, column=1, padx=10)
+
+
+class ImageButtonWithText(tk.Frame):
+    def __init__(self, master, image, text):
+        super().__init__(master=master)
+        self._image = image
+        self._text = text
+        self._initialize()
+        self.bind(sequence="<Enter>", func=self._on_enter)
+        self.bind(sequence="<Leave>", func=self._on_leave)
+
+    def _initialize(self) -> None:
+        """
+
+        :return: None
+        """
+        image_label = tk.Label(master=self, image=self._image)
+        text_label = tk.Label(master=self, text=self._text)
+
+        image_label.grid(row=0, column=0)
+        text_label.grid(row=1, column=0)
+
+    def _on_enter(self, _) -> None:
+        """
+
+        :param _: Tk Event Object
+        :return: None
+        """
+        pass
+
+    def _on_leave(self, _) -> None:
+        """
+
+        :param _: Tk Event Object
+        :return: None
+        """
+        pass

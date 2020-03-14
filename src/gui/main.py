@@ -1,9 +1,9 @@
-from typing import Tuple
 import tkinter as tk
+from typing import Tuple
 
-from src.gui.components import EntryElement, TaskListElement
-from src.taskcontroller import TaskController
+from src.gui.components import ButtonMapElement, EntryElement, TaskListElement
 from src.task import Task
+from src.task_controller import TaskController
 
 
 class GUI(tk.Frame):
@@ -29,13 +29,19 @@ class GUI(tk.Frame):
         self.master.grid_rowconfigure(index=0, weight=1)
 
         self.grid_columnconfigure(index=0, weight=1)
+
         self.grid_rowconfigure(index=0, pad=5)
+        self.grid_rowconfigure(index=1, pad=5, weight=1)
+        self.grid_rowconfigure(index=2, pad=5)
 
         entry = EntryElement(master=self, placeholder="Enter task to list 'todos'")
         entry.grid(row=0, column=0, sticky="ew")
 
         self._task_list = TaskListElement(master=self)
         self._task_list.grid(row=1, column=0, sticky="nsew")
+
+        button_map = ButtonMapElement(master=self)
+        button_map.grid(row=2, column=0, sticky="s")
 
         self.grid(column=0, row=0, padx=5, pady=5, sticky="nsew")
 
