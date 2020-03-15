@@ -1,5 +1,5 @@
 import tkinter as tk
-from typing import Tuple
+from typing import Tuple, List
 
 from src.gui.components import ButtonMapElement, EntryElement, TaskListElement
 from src.task import Task
@@ -14,7 +14,7 @@ class GUI(tk.Frame):
         """
         super().__init__(master=master)
         self._task_list = None  # Tk
-        self._controller = controller
+        self.controller = controller
         self._initialize()
         self.render_tasks()
 
@@ -37,7 +37,7 @@ class GUI(tk.Frame):
         entry = EntryElement(master=self, placeholder="Enter task to list 'todos'")
         entry.grid(row=0, column=0, sticky="ew")
 
-        self._task_list = TaskListElement(master=self)
+        self._task_list = TaskListElement(master=self, update_func=self.update_task)
         self._task_list.grid(row=1, column=0, sticky="nsew")
 
         button_map = ButtonMapElement(master=self)
@@ -82,22 +82,32 @@ class GUI(tk.Frame):
     def add_task(self, task: Task) -> None:
         """
 
-        :param task:
+        :param task: Task object
         :return:
         """
-        error = self._controller.add_task(task=task, table_name="tasks")
+        error = self.controller.add_task(task=task, table_name="tasks")
         if error:
             print("Error adding task.")
 
-    def get_tasks(self):
+    def get_tasks(self) -> List[Task]:
         """
 
         :return:
         """
-        error, tasks = self._controller.get_tasks(table_name="tasks")
+        error, tasks = self.controller.get_tasks(table_name="tasks")
         if error:
             print("Error fetching tasks.")
         return tasks
+
+    def update_task(self, task: Task) -> None:
+        """
+
+        :param task:
+        :return:
+        """
+        error = self.controller.update_task(task=task, table_name="tasks")
+        if error:
+            print("Error while marking task as one.")
 
 
 def initialize_gui(controller: TaskController) -> None:

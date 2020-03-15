@@ -27,8 +27,15 @@ class DatabaseController(object):
         :return: None
         """
         if self._cursor:
-            sql_statement = "CREATE TABLE ?(date text, text text, done integer)"
-            self._cursor.execute(sql_statement, name)
+            sql_statement = """CREATE TABLE {table} (
+                            tid INTEGER PRIMARY KEY AUTOINCREMENT,
+                            date text,
+                            text text,
+                            done integer
+                            );""".format(
+                table=name
+            )
+            self._cursor.execute(sql_statement)
 
     def add_task_to_table(self, task: Task, table_name: str) -> int:
         """
@@ -39,17 +46,16 @@ class DatabaseController(object):
         """
         if self._cursor:
             try:
-                sql_statement = "INSERT INTO {table} VALUES (?, ?, ?)".format(
+                sql_statement = "INSERT INTO {table}(date, text, done) VALUES (?, ?, ?)".format(
                     table=table_name
                 )
-                self._cursor.execute(sql_statement, task.props)
+                self._cursor.execute(sql_statement, task.props_no_tid)
                 self.commit()
                 return 0
             except sqlite3.Error as e:
                 print("Database error: %s" % e)
                 return 1
-        else:
-            return 1
+        return 1
 
     def get_tasks_from_table(self, table_name: str) -> Tuple[int, List[Task]]:
         """
@@ -68,8 +74,27 @@ class DatabaseController(object):
             except sqlite3.Error as e:
                 print("Database error: %s" % e)
                 return 1, []
-        else:
-            return 1, []
+        return 1, []
+
+    def update_task_inside_table(self, task: Task, table_name: str) -> int:
+        """
+
+        :param task:
+        :param table_name:
+        :return:
+        """
+        if self._cursor:
+            try:
+                sql_statement = "UPDATE {table} SET date = ?, text = ?, done = ? WHERE tid = ?".format(
+                    table=table_name
+                )
+                self._cursor.execute(sql_statement, (*task.props_no_tid, task.tid))
+                self.commit()
+                return 0
+            except sqlite3.Error as e:
+                print("Database error: %s" % e)
+                return 0
+        return 1
 
     def commit(self) -> None:
         """

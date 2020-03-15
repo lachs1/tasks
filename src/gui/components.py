@@ -1,11 +1,36 @@
 import tkinter as tk
+from typing import Callable
 
 from src.constants import MORE_IMAGE, PLACEHOLDER_COLOR, SORT_IMAGE, TASK_BG_COLOR
 from src.task import Task
 
 
+class TaskElementCheckButton(tk.Checkbutton):
+    def __init__(self, master, text: str):
+        self._checked = tk.BooleanVar(value=False)
+        if master.task.done:
+            self._checked.set(value=True)
+        self._text = text
+        super().__init__(
+            master=master,
+            variable=self._checked,
+            text=self._text,
+            bg=master["bg"],
+            command=self._on_click,
+        )
+
+    def _on_click(self) -> None:
+        """
+
+        :return:
+        """
+        # ToDo: logic
+        self.master.task.done = self._checked.get()
+        self.master.update_task(task=self.master.task)
+
+
 class TaskElement(tk.Frame):
-    def __init__(self, task: Task, master=None):
+    def __init__(self, task: Task, master):
         """
 
         :param task: Task Object
@@ -13,7 +38,7 @@ class TaskElement(tk.Frame):
         """
         super().__init__(master=master)
         self.task = task
-        self._checkbox_variable = tk.IntVar()
+        self.update_task = self.master.update_func  # ref
         self._initialize()
 
     def _initialize(self) -> None:
@@ -30,22 +55,18 @@ class TaskElement(tk.Frame):
 
         self.grid_rowconfigure(index=0)
 
-        check_button = tk.Checkbutton(
-            master=self,
-            variable=self._checkbox_variable,
-            text=self.task.text,
-            bg=self["bg"],
-        )
+        check_button = TaskElementCheckButton(master=self, text=self.task.text)
         check_button.grid(row=0, column=0)
 
 
 class TaskListElement(tk.Frame):
-    def __init__(self, master=None):
+    def __init__(self, master, update_func: Callable):
         """
 
         :param master: GUI Object
         """
         super().__init__(master=master)
+        self.update_func = update_func
         self._initialize()
 
     def _initialize(self) -> None:
@@ -115,12 +136,10 @@ class EntryElement(tk.Entry):
         text = self.get()
         if text:
             self._clean()
+            # ToDo: proper task object generating
             task = Task(date="", text=text)
             self.master.add_task(task=task)
-        else:
-            print("empty")
-            pass
-        self.master.render_tasks()
+            self.master.render_tasks()
 
     def _clean(self):
         self.delete(first="0", last="end")
