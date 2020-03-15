@@ -85,15 +85,19 @@ class GUI(tk.Frame):
         :param task:
         :return:
         """
-        self._controller.add_task(task=task)
+        error = self._controller.add_task(task=task, table_name="tasks")
+        if error:
+            print("Error adding task.")
 
-    @property
-    def tasks(self):
+    def get_tasks(self):
         """
 
         :return:
         """
-        return self._controller.tasks
+        error, tasks = self._controller.get_tasks(table_name="tasks")
+        if error:
+            print("Error fetching tasks.")
+        return tasks
 
 
 def initialize_gui(controller: TaskController) -> None:
@@ -103,5 +107,6 @@ def initialize_gui(controller: TaskController) -> None:
     :return: None
     """
     root = tk.Tk()
+    root.title("Tasks")
     _ = GUI(master=root, controller=controller)
     root.mainloop()

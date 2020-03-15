@@ -64,7 +64,7 @@ class TaskListElement(tk.Frame):
         for task in self.grid_slaves():
             task.grid_forget()
 
-        for index, task in enumerate(self.master.tasks):
+        for index, task in enumerate(self.master.get_tasks()):
             task_element = TaskElement(task=task, master=self)
             task_element.grid(row=index, column=0, sticky="ew")
             self.grid_rowconfigure(index=index, pad=5)
