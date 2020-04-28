@@ -18,6 +18,7 @@ class TasksGUI(tk.Frame):
         self._task_frame = None  # TK Element
         self._entry_frame = None  # Tk Element
         self._root = master  # Tk Element
+        self["bg"] = "#1E1E1E"
         self._initialize()
         self.update_all()
 
@@ -57,7 +58,7 @@ class TasksGUI(tk.Frame):
         )
 
         self._entry_frame = EntryFrame(master=self)
-        self._entry_frame.grid(row=1, column=1, sticky="ew")
+        self._entry_frame.grid(row=1, column=1, columnspan=2, sticky="ew")
 
         self.grid(column=0, row=0, sticky="nsew")
 
@@ -71,10 +72,18 @@ class TasksGUI(tk.Frame):
         :param _: Tk Event Object
         :return: None
         """
-        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        canvas_height = self._canvas.winfo_height()
+        frame_height = self._task_frame.winfo_reqheight()  # Required height
+
+        if canvas_height >= frame_height:
+            new_height = canvas_height
+        else:
+            new_height = frame_height
         self._canvas.itemconfigure(
-            self._task_frame_id, width=self._canvas.winfo_width()
+            self._task_frame_id, height=new_height, width=self._canvas.winfo_width()
         )
+
+        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
 
     def _bound_to_mousewheel(self, _) -> None:
         """
@@ -172,6 +181,7 @@ class EntryFrame(tk.Frame):
     def __init__(self, master: TasksGUI):
         super().__init__(master=master)
         self._entry = None  # Tk element
+        self["bg"] = "#1E1E1E"
         self._initialize()
 
     def _initialize(self) -> None:
@@ -184,10 +194,10 @@ class EntryFrame(tk.Frame):
         plus_sign = tk.Label(
             master=self, text="\uFF0B", background="#262626", fg="#fff", borderwidth=0,
         )
-        plus_sign.grid(row=0, column=0, sticky="nsew")
+        plus_sign.grid(row=0, column=0, padx=(5, 0), pady=5, sticky="nsew")
 
         self._entry = EntryElement(master=self, placeholder="Add a task")
-        self._entry.grid(row=0, column=1, sticky="ew")
+        self._entry.grid(row=0, column=1, padx=(0, 5), pady=5, sticky="ew")
 
 
 class TaskFrame(tk.Frame):
