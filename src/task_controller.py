@@ -1,5 +1,6 @@
 import sqlite3
 from typing import List, Tuple
+import re
 
 from src.task import Task
 
@@ -81,25 +82,23 @@ class TaskController(object):
         self._connection.row_factory = sqlite3.Row
         self._cursor = self._connection.cursor()
 
-    def create_new_table(self, name: str) -> int:
+    def create_new_list(self, list_name: str) -> Tuple[int, str]:
         """
-
-        :param name: Str, table name
-        :return: int
         """
-        # ToDo: return error?
         if self._cursor:
-            sql_statement = """CREATE TABLE {table} (
-                            tid INTEGER PRIMARY KEY AUTOINCREMENT,
-                            date text,
-                            text text,
-                            done integer
-                            );""".format(
-                table=name
-            )
-            self._cursor.execute(sql_statement)
-            return 0
-        return 1
+            if re.match(r"(?![\d])(?!sqlite_)\b([\w\d]+)\b", list_name):
+                sql_statement = """CREATE TABLE {table} (
+                                tid INTEGER PRIMARY KEY AUTOINCREMENT,
+                                date text,
+                                text text,
+                                done integer
+                                );""".format(
+                    table=list_name
+                )
+                self._cursor.execute(sql_statement)
+                return 0, ""
+            return 1, "Please enter a valid list name."
+        return 1, "There is no connection."
 
     def commit(self) -> None:
         """

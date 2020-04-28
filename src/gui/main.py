@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import simpledialog, messagebox
 from typing import Tuple, List
 
 from src.task import Task
@@ -18,7 +19,6 @@ class TasksGUI(tk.Frame):
         self._task_frame = None  # TK Element
         self._entry_frame = None  # Tk Element
         self._root = master  # Tk Element
-        self["bg"] = "#1E1E1E"
         self._initialize()
         self.update_all()
 
@@ -36,9 +36,8 @@ class TasksGUI(tk.Frame):
         self.grid_rowconfigure(index=0, weight=1)
 
         self._table_list = TableList(master=self)
-        self._table_list.grid(row=0, column=0, rowspan=2, sticky="ns")
+        self._table_list.grid(row=0, column=0, sticky="ns")
 
-        # Allow scrollbar
         self._canvas = tk.Canvas(
             master=self, bd=0, highlightthickness=0, relief="ridge"
         )
@@ -60,11 +59,24 @@ class TasksGUI(tk.Frame):
         self._entry_frame = EntryFrame(master=self)
         self._entry_frame.grid(row=1, column=1, columnspan=2, sticky="ew")
 
+        self._new_list_btn_tk = tk.Button(master=self, text="\uFF0B New List", command=self._on_new_list_btn_press)
+        self._new_list_btn_tk.grid(row=1, column=0, sticky="nsew")
+
         self.grid(column=0, row=0, sticky="nsew")
 
         self._canvas.bind(sequence="<Configure>", func=self._configure_canvas)
         self._task_frame.bind(sequence="<Enter>", func=self._bound_to_mousewheel)
         self._task_frame.bind(sequence="<Leave>", func=self._unbound_to_mousewheel)
+
+    def _on_new_list_btn_press(self) -> None:
+        """
+        Called when user clicks "New List" button.
+        :return: None
+        """
+        name = simpledialog.askstring(title="New List", prompt="Name of the new list")
+        err, message = self._controller.create_new_list(list_name=name)
+        if err:
+            messagebox.showerror(title="Error", message=message)
 
     def _configure_canvas(self, _) -> None:
         """
