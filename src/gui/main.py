@@ -3,24 +3,33 @@ from tkinter import simpledialog, messagebox
 from typing import Tuple, List
 
 from src.task import Task
+from src.check_list import CheckList
 from src.task_controller import TaskController
+
+MAIN_BACKGROUND_COLOR = "#1E1E1E"
+TASK_ELEMENT_BACKGROUND_COLOR = "#323232"
+CHECK_LISTS_BACKGROUND_COLOR = "#302F2F"
+ENTRY_BACKGROUND_COLOR = "#262626"
+ENTRY_PLACEHOLDER_COLOR = "#d5dcd6"
+WHITE_COLOR = "#FFFFFF"
 
 
 class TasksGUI(tk.Frame):
-    def __init__(self, controller: TaskController, master: tk.Tk):
+    def __init__(self, task_controller: TaskController, master: tk.Tk):
         """
 
+        :param task_controller: TaskController Object
         :param master: Tk Object
         """
         super().__init__(master=master)
-        self._controller = controller  # TaskController Object
-        self._table_list = None  # TK Element
-        self._canvas = None  # Tk Element
-        self._task_frame = None  # TK Element
-        self._entry_frame = None  # Tk Element
-        self._root = master  # Tk Element
+        self._check_lists_tk = None
+        self._canvas_tk = None
+        self._tasks_tk = None
+        self._entry_tk = None
+        self._root_tk = master
+        self._task_controller = task_controller
+        self._selected_cid = None
         self._initialize()
-        self.update_all()
 
     def _initialize(self) -> None:
         """
@@ -29,44 +38,56 @@ class TasksGUI(tk.Frame):
         """
         self._set_window_size_and_pos()
 
-        self._root.grid_columnconfigure(index=0, weight=1)
-        self._root.grid_rowconfigure(index=0, weight=1)
+        self._root_tk.grid_columnconfigure(index=0, weight=1)
+        self._root_tk.grid_rowconfigure(index=0, weight=1)
 
         self.grid_columnconfigure(index=1, weight=1)
         self.grid_rowconfigure(index=0, weight=1)
 
-        self._table_list = TableList(master=self)
-        self._table_list.grid(row=0, column=0, sticky="ns")
+        self._check_lists_tk = CheckLists(master=self)
+        self._check_lists_tk.grid(row=0, column=0, sticky="ns")
 
-        self._canvas = tk.Canvas(
+        self._canvas_tk = tk.Canvas(
             master=self, bd=0, highlightthickness=0, relief="ridge"
         )
-        self._task_frame = TaskFrame(master=self)
+        self._tasks_tk = Tasks(master=self)
 
         scrollbar = tk.Scrollbar(
-            master=self, orient="vertical", command=self._canvas.yview,
+            master=self, orient="vertical", command=self._canvas_tk.yview,
         )
-        self._canvas.configure(
-            yscrollcommand=scrollbar.set, scrollregion=self._canvas.bbox("all")
+        self._canvas_tk.configure(
+            yscrollcommand=scrollbar.set, scrollregion=self._canvas_tk.bbox("all")
         )
         scrollbar.grid(row=0, column=2, sticky="ns")
 
-        self._canvas.grid(row=0, column=1, sticky="nsew")
-        self._task_frame_id = self._canvas.create_window(
-            (0, 0), window=self._task_frame, anchor="nw"
+        self._canvas_tk.grid(row=0, column=1, sticky="nsew")
+        self._task_frame_id = self._canvas_tk.create_window(
+            (0, 0), window=self._tasks_tk, anchor="nw"
         )
 
-        self._entry_frame = EntryFrame(master=self)
-        self._entry_frame.grid(row=1, column=1, columnspan=2, sticky="ew")
+        self._entry_tk = EntryFrame(master=self)
+        self._entry_tk.grid(row=1, column=1, columnspan=2, sticky="ew")
 
-        self._new_list_btn_tk = tk.Button(master=self, text="\uFF0B New List", command=self._on_new_list_btn_press)
+        self._new_list_btn_tk = tk.Button(
+            master=self, text="\uFF0B New List", command=self._on_new_list_btn_press
+        )
         self._new_list_btn_tk.grid(row=1, column=0, sticky="nsew")
 
         self.grid(column=0, row=0, sticky="nsew")
 
-        self._canvas.bind(sequence="<Configure>", func=self._configure_canvas)
-        self._task_frame.bind(sequence="<Enter>", func=self._bound_to_mousewheel)
-        self._task_frame.bind(sequence="<Leave>", func=self._unbound_to_mousewheel)
+        self._check_lists_tk.bind(sequence="<<ListboxSelect>>", func=self._on_list_change)
+        self._canvas_tk.bind(sequence="<Configure>", func=self._configure_canvas)
+        self._tasks_tk.bind(sequence="<Enter>", func=self._bound_to_mousewheel)
+        self._tasks_tk.bind(sequence="<Leave>", func=self._unbound_to_mousewheel)
+
+    def _on_list_change(self, _) -> None:
+        """
+
+        :param _:
+        :return:
+        """
+        self._selected_cid = self._check_lists_tk.curselection()[0]
+        self._tasks_tk.refresh()
 
     def _on_new_list_btn_press(self) -> None:
         """
@@ -74,9 +95,14 @@ class TasksGUI(tk.Frame):
         :return: None
         """
         name = simpledialog.askstring(title="New List", prompt="Name of the new list")
-        err, message = self._controller.create_new_list(list_name=name)
-        if err:
-            messagebox.showerror(title="Error", message=message)
+        if name:
+            # ToDo: CheckList description
+            checklist = CheckList(name=name, description="")
+            err, message = self._task_controller.add_check_list(check_list=checklist)
+            if err:
+                messagebox.showerror(title="Error", message=message)
+            else:
+                self._check_lists_tk.refresh()
 
     def _configure_canvas(self, _) -> None:
         """
@@ -84,18 +110,18 @@ class TasksGUI(tk.Frame):
         :param _: Tk Event Object
         :return: None
         """
-        canvas_height = self._canvas.winfo_height()
-        frame_height = self._task_frame.winfo_reqheight()  # Required height
+        canvas_height = self._canvas_tk.winfo_height()
+        frame_height = self._tasks_tk.winfo_reqheight()  # Required height
 
         if canvas_height >= frame_height:
             new_height = canvas_height
         else:
             new_height = frame_height
-        self._canvas.itemconfigure(
-            self._task_frame_id, height=new_height, width=self._canvas.winfo_width()
+        self._canvas_tk.itemconfigure(
+            self._task_frame_id, height=new_height, width=self._canvas_tk.winfo_width()
         )
 
-        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        self._canvas_tk.configure(scrollregion=self._canvas_tk.bbox("all"))
 
     def _bound_to_mousewheel(self, _) -> None:
         """
@@ -103,7 +129,7 @@ class TasksGUI(tk.Frame):
         :param _:
         :return: None
         """
-        self._canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self._canvas_tk.bind_all("<MouseWheel>", self._on_mousewheel)
 
     def _unbound_to_mousewheel(self, _):
         """
@@ -111,7 +137,7 @@ class TasksGUI(tk.Frame):
         :param _:
         :return: None
         """
-        self._canvas.unbind_all("<MouseWheel>")
+        self._canvas_tk.unbind_all("<MouseWheel>")
 
     def _on_mousewheel(self, event) -> None:
         """
@@ -122,25 +148,26 @@ class TasksGUI(tk.Frame):
         delta = 1
         if event.num == 5 or event.delta < 0:
             delta = -1
-        self._canvas.yview_scroll(delta, "units")
+        self._canvas_tk.yview_scroll(delta, "units")
 
     def _set_window_size_and_pos(self) -> None:
         """
 
         :return: None
         """
+        # ToDO: ?
         # Ensure that the geometry values returned are accurate
         # https://stackoverflow.com/a/10018670
-        self._root.update_idletasks()
+        self._root_tk.update_idletasks()
         screen_width, screen_height = self.get_screen_size()
 
-        window_width = int(round(0.20 * screen_width))
-        window_height = int(round(0.30 * screen_height))
+        window_width = int(round(0.5 * screen_width))
+        window_height = int(round(0.4 * screen_height))
 
         x = screen_width // 2 - window_width // 2
         y = screen_height // 2 - window_height // 2
 
-        self._root.geometry(
+        self._root_tk.geometry(
             newGeometry="{0}x{1}+{2}+{3}".format(window_width, window_height, x, y)
         )
 
@@ -149,27 +176,42 @@ class TasksGUI(tk.Frame):
 
         :return: Tuple[Width: Int, Height: Int]
         """
-        return self._root.winfo_screenwidth(), self._root.winfo_screenheight()
+        return self._root_tk.winfo_screenwidth(), self._root_tk.winfo_screenheight()
 
-    def append_task(self, task: Task) -> None:
+    def add_task(self, task: Task) -> None:
         """
 
         :param task: Task object
         :return:
         """
-        error = self._controller.add_task(task=task, table_name="tasks")
+        task.check_list_id = self._selected_cid
+        error, message = self._task_controller.add_task(task=task)
         if error:
-            print("Error adding task.")
+            messagebox.showerror(title="Error", message=message)
+        else:
+            self._tasks_tk.refresh()
 
-    def get_tasks(self) -> List[Task]:
+    @property
+    def tasks(self) -> List[Task]:
         """
 
         :return:
         """
-        error, tasks = self._controller.get_tasks(table_name="tasks")
+        error, message, tasks = self._task_controller.get_tasks(check_list_id=self._selected_cid)
         if error:
-            print("Error fetching tasks.")
+            messagebox.showerror(title="Error", message=message)
         return tasks
+
+    @property
+    def check_lists(self) -> List[CheckList]:
+        """
+
+        :return:
+        """
+        error, message, lists = self._task_controller.get_check_lists()
+        if error:
+            messagebox.showerror(title="Error", message=message)
+        return lists
 
     def update_task(self, task: Task) -> None:
         """
@@ -177,23 +219,16 @@ class TasksGUI(tk.Frame):
         :param task:
         :return:
         """
-        error = self._controller.update_task(task=task, table_name="tasks")
+        error, message = self._task_controller.update_task(task=task)
         if error:
-            print("Error while marking task as one.")
-
-    def update_all(self) -> None:
-        """
-
-        :return: None
-        """
-        self._task_frame.update_all()
+            messagebox.showerror(title="Error", message=message)
 
 
 class EntryFrame(tk.Frame):
     def __init__(self, master: TasksGUI):
         super().__init__(master=master)
         self._entry = None  # Tk element
-        self["bg"] = "#1E1E1E"
+        self._task_gui = master  # Tk Element
         self._initialize()
 
     def _initialize(self) -> None:
@@ -201,120 +236,88 @@ class EntryFrame(tk.Frame):
 
         :return: None
         """
+        self.configure(bg=MAIN_BACKGROUND_COLOR)
+
         self.grid_columnconfigure(index=1, weight=1)
 
         plus_sign = tk.Label(
-            master=self, text="\uFF0B", background="#262626", fg="#fff", borderwidth=0,
+            master=self,
+            text="\uFF0B",
+            background=ENTRY_BACKGROUND_COLOR,
+            fg=WHITE_COLOR,
+            borderwidth=0,
         )
         plus_sign.grid(row=0, column=0, padx=(5, 0), pady=5, sticky="nsew")
 
         self._entry = EntryElement(master=self, placeholder="Add a task")
         self._entry.grid(row=0, column=1, padx=(0, 5), pady=5, sticky="ew")
 
-
-class TaskFrame(tk.Frame):
-    def __init__(self, master: TasksGUI):
-        super().__init__(master=master)
-        self._task_gui = master  # Tk Element
-        self._task_list = None  # Tk Element
-        self._initialize()
-        self["bg"] = "#1E1E1E"
-
-    def _initialize(self) -> None:
-        """
-
-        :return: None
-        """
-
-        self.grid_columnconfigure(index=0, weight=1)
-        self.grid_rowconfigure(index=0, weight=1)
-
-        self._task_list = TaskListElement(master=self)
-        self._task_list.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-
     def add_task(self, task: Task) -> None:
         """
 
+        :param task:
         :return: None
         """
-        self._task_gui.append_task(task=task)
-
-    def update_task(self, task: Task) -> None:
-        """
-
-        :return: None
-        """
-        self._task_gui.update_task(task=task)
-
-    def update_all(self) -> None:
-        """
-
-        :return: None
-        """
-        # self._entry.update()  # ToDo?
-        self._task_list.render_tasks()
+        self._task_gui.add_task(task=task)
 
 
-class TaskListElement(tk.Frame):
-    def __init__(self, master: TaskFrame):
-        """
-
-        :param master: GUI Object
-        """
+class Tasks(tk.Frame):
+    def __init__(self, master: TasksGUI):
         super().__init__(master=master)
+        self._task_gui = master  # Tk Element
         self._initialize()
-        self["bg"] = "#1E1E1E"
+        self.refresh()
 
     def _initialize(self) -> None:
         """
 
         :return: None
         """
+        self.configure(bg=MAIN_BACKGROUND_COLOR)
+
         self.grid_columnconfigure(index=0, weight=1)
 
-    def render_tasks(self) -> None:
-        # ToDo: flickering when called.
+    def refresh(self) -> None:
         """
-
         :return: None
         """
         for task in self.grid_slaves():
             task.grid_forget()
 
-        for index, task in enumerate(self.master.master.get_tasks()):
+        for index, task in enumerate(self._task_gui.tasks):
             task_element = TaskElement(task=task, master=self)
-            task_element.grid(row=index, column=0, sticky="ew")
-            self.grid_rowconfigure(index=index, pad=5)
+            task_element.grid(row=index, column=0, pady=(5, 0), padx=5, sticky="ew")
 
     def update_task(self, task: Task) -> None:
         """
 
+        :param task: Task Object
         :return: None
         """
-        self.master.update_task(task=task)
+        self._task_gui.update_task(task=task)
 
 
 class TaskElement(tk.Checkbutton):
-    def __init__(self, task: Task, master: TaskListElement):
+    def __init__(self, task: Task, master: Tasks):
         """
 
         :param task: Task Object
-        :param master: GUI Object
+        :param master: TaskList
         """
         self._task = task
-        self._checked = tk.BooleanVar(value=(True if task.done else False))
+        self._checked = tk.BooleanVar(value=task.done)
+        self._task_list = master
         super().__init__(
             master=master,
             state="normal",
             variable=self._checked,
-            text=self._task.text,
+            text=self._task.description,
             anchor="w",
             padx=5,
             pady=5,
-            # ToDo: think about this
             command=self._update_task,
-            background="#323232",
-            fg="#fff",
+            background=TASK_ELEMENT_BACKGROUND_COLOR,
+            fg=WHITE_COLOR,
         )
 
     def _update_task(self) -> None:
@@ -322,8 +325,8 @@ class TaskElement(tk.Checkbutton):
 
         :return: None
         """
-
-        self.master.update_task(task=self._task)
+        self._task.done = self._checked.get()
+        self._task_list.update_task(task=self._task)
 
 
 class EntryElement(tk.Entry):
@@ -335,31 +338,41 @@ class EntryElement(tk.Entry):
         """
         # ToDo: validatecommand=
         super().__init__(
-            master=master, borderwidth=5, relief="flat", highlightthickness=0
+            master=master,
+            borderwidth=5,
+            relief="flat",
+            highlightthickness=0,
+            bg=ENTRY_BACKGROUND_COLOR,
         )
-        self["bg"] = "#262626"
-        self._placeholder_color = "#d5dcd6"
-        self._default_color = "#fff"
+
+        self._placeholder_color = ENTRY_PLACEHOLDER_COLOR
+        self._default_color = WHITE_COLOR
         self._placeholder = placeholder
-        self._task_frame = master
+        self._entry_frame = master
+
         self.focused = False
 
         self.bind(sequence="<FocusIn>", func=self._focus_in)
         self.bind(sequence="<FocusOut>", func=self._focus_out)
-        self.bind(sequence="<Return>", func=self._append_task)
+        self.bind(sequence="<Return>", func=self._add_task)
 
-        self._append_placeholder()
+        self._insert_placeholder()
 
-    def _append_placeholder(self) -> None:
+    def _insert_placeholder(self) -> None:
         """
 
         :return: None
         """
         self.focused = False
-        self.insert(index=0, string=self._placeholder)
-        self["fg"] = self._placeholder_color
 
-    def _clean(self):
+        self.insert(index=0, string=self._placeholder)
+        self.configure(fg=self._placeholder_color)
+
+    def _clean(self) -> None:
+        """
+
+        :return: None
+        """
         self.delete(first="0", last="end")
 
     def _focus_in(self, _) -> None:
@@ -371,7 +384,7 @@ class EntryElement(tk.Entry):
         if not self.focused:
             self.focused = True
             self._clean()
-            self["fg"] = self._default_color
+            self.configure(fg=self._default_color)
 
     def _focus_out(self, _) -> None:
         """
@@ -380,9 +393,9 @@ class EntryElement(tk.Entry):
         :return: None
         """
         if not self.get():
-            self._append_placeholder()
+            self._insert_placeholder()
 
-    def _append_task(self, _) -> None:
+    def _add_task(self, _) -> None:
         """
 
         :param _: Tk Event Object
@@ -391,45 +404,54 @@ class EntryElement(tk.Entry):
         text = self.get()
         if text:
             self._clean()
-            # ToDo: proper task object generating
-            task = Task(date="", text=text)
-            self._task_frame.add_task(task=task)
+            # ToDo: List_name
+            self._entry_frame.add_task(task=Task(description=text))
 
 
-class TableList(tk.Listbox):
+class CheckLists(tk.Listbox):
     def __init__(self, master: TasksGUI):
         super().__init__(
             master=master,
             borderwidth=0,
             highlightthickness=0,
             activestyle=None,
-            background="#302F2F",
+            background=CHECK_LISTS_BACKGROUND_COLOR,
             font=("Helvetica", 20),
             width=15,
             highlightcolor=None,
             selectbackground=None,
-            fg="#fff",
+            fg=WHITE_COLOR,
         )
-        self._initialize()
+        self._task_gui_tk = master
+        self.refresh()
+        self.select_set(0)
 
-    def _initialize(self) -> None:
+    def refresh(self) -> None:
         """
 
-        :return: None
+        :return:
         """
-        self.insert("end", "\u2630 School stuff")
+        self.delete(0, 'end')
+
+        check_lists = self._task_gui_tk.check_lists
+
+        for check_list in check_lists:
+            self.insert("end", check_list.name)
 
 
-def initialize_gui(controller: TaskController) -> None:
+def initialize_gui(task_controller: TaskController) -> None:
     """
 
-    :param controller: TaskController Object
+    :param task_controller: TaskController Object
     :return: None
     """
+
     root = tk.Tk()
     root.title("Tasks")
-    #  root.option_add(pattern="*Font", value="courier")
+
     icon = tk.Image(imgtype="photo", file="src/ico.png")
     root.iconphoto(True, icon)
-    _ = TasksGUI(master=root, controller=controller)
+
+    _ = TasksGUI(master=root, task_controller=task_controller)
+
     root.mainloop()

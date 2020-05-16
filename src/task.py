@@ -1,20 +1,49 @@
-from typing import Tuple
-
 
 class Task(object):
-    def __init__(self, date: str, text: str, done: bool = False, tid: int = None):
-        self._tid = tid
-        self._date = date
-        self._text = text
+    def __init__(
+        self,
+        description: str,
+        due_date: str = "",
+        check_list_id: int = None,
+        done: bool = False,
+        tid: int = None,
+    ):
+        """
+        :param check_list_id:
+        :param due_date: Due date of the task
+        :param description: Description of the task
+        :param done: Done Flag
+        :param tid: Task Id
+        """
+        self._check_list_id = check_list_id
+        self._due_date = due_date
+        self._description = description
         self._done = done
+        self._tid = tid
 
     @property
-    def text(self) -> str:
+    def check_list_id(self) -> int:
+        """
+
+        :return:
+        """
+        return self._check_list_id
+
+    @check_list_id.setter
+    def check_list_id(self, cid: int) -> None:
+        """
+
+        :return:
+        """
+        self._check_list_id = cid
+
+    @property
+    def description(self) -> str:
         """
 
         :return: str
         """
-        return self._text
+        return self._description
 
     @property
     def done(self) -> bool:
@@ -42,17 +71,9 @@ class Task(object):
         return self._tid
 
     @property
-    def props(self) -> Tuple[int, str, str, bool]:
+    def due_date(self) -> str:
         """
 
-        :return: Tuple of properties
+        :return: str
         """
-        return self._tid, self._date, self._text, self._done
-
-    @property
-    def props_no_tid(self) -> Tuple[str, str, bool]:
-        """
-
-        :return: Tuple of properties without task id
-        """
-        return self._date, self._text, self._done
+        return self._due_date
